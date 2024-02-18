@@ -8,15 +8,25 @@ contract Staking {
     IERC20 public immutable rewardToken;
 
     address public owner;
-    uint public duration;
-    uint public finishAt;
-    uint public updateAt;
-    uint public rewardRate;
-    uint public rewardPerTokenStored;
-    uint public totalSupply;
 
+    // Duration of rewards to be paid out (in seconds)
+    uint public duration;
+    // Timestamp of when the rewards finish
+    uint public finishAt;
+    // Minimum of last updated time and reward finish time
+    uint public updatedAt;
+    // Reward to be paid out per second
+    uint public rewardRate;
+    // Sum of (reward rate * dt * 1e18 / total supply)
+    uint public rewardPerTokenStored;
+    // User address => rewardPerTokenStored
     mapping(address => uint) public userRewardPerTokenPaid;
+    // User address => rewards to be claimed
     mapping(address => uint) public rewards;
+
+    // Total staked
+    uint public totalSupply;
+    // User address => staked amount
     mapping(address => uint) public balanceOf;
 
     constructor(address _stakingToken, address _rewardToken) {
@@ -31,7 +41,7 @@ contract Staking {
     }
     modifier updateReward(address _account) {
         rewardPerTokenStored = rewardPerToken();
-        updateAt = lastTimeRewardApplicable();
+        updatedAt = lastTimeRewardApplicable();
         if (_account != address(0)) {
             rewards[_account] = earned(_account);
             userRewardPerTokenPaid[_account] = rewardPerTokenStored;
@@ -57,7 +67,7 @@ contract Staking {
             "Reward amount > balance"
         );
         finishAt = block.timestamp + duration;
-        updateAt = block.timestamp;
+        updatedAt = block.timestamp;
     }
 
     function stake(uint _amount) external updateReward(msg.sender) {
@@ -81,7 +91,7 @@ contract Staking {
         }
         return
             rewardPerTokenStored +
-            (rewardRate * (lastTimeRewardApplicable() - updateAt) * 1e18) /
+            (rewardRate * (lastTimeRewardApplicable() - updatedAt) * 1e18) /
             totalSupply;
     }
 
